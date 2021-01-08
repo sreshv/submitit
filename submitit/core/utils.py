@@ -117,6 +117,7 @@ class DelayedSubmission:
         self._result: Any = None
         self._done = False
         self.timeout_countdown: int = 0  # controlled in submission and execution
+        self.sys_path = list(sys.path)
 
     def result(self) -> Any:
         if not self._done:
