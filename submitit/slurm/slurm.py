@@ -474,7 +474,9 @@ def _make_sbatch_string(
     # Job arrays will write files in the form  <ARRAY_ID>_<ARRAY_TASK_ID>_<TASK_ID>
     if map_count is not None:
         assert isinstance(map_count, int) and map_count
-        parameters["array"] = f"0-{map_count - 1}%{min(map_count, array_parallelism)}"
+        parameters["array"] = f"0-{map_count - 1}"
+        if array_parallelism is not None and array_parallelism > 0:
+            parameters["array"] += f"%{min(map_count, array_parallelism)}"
         stdout = stdout.replace("%j", "%A_%a")
         stderr = stderr.replace("%j", "%A_%a")
     parameters["output"] = stdout.replace("%t", "0")
