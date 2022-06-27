@@ -508,7 +508,8 @@ class Job(tp.Generic[R]):
         return f'{self.__class__.__name__}<job_id={self.job_id}, task_id={self.task_id}, state="{state}">'
 
     def __del__(self) -> None:
-        if self._cancel_at_deletion:
+        # somehow this is called before the job is constructed
+        if hasattr(self, '_cancel_at_deletion') and self._cancel_at_deletion:
             if not self.watcher.is_done(self.job_id, mode="cache"):
                 self.cancel(check=False)
 
