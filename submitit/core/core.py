@@ -57,7 +57,7 @@ class InfoWatcher:
 
     @property
     def num_calls(self) -> int:
-        """Number of calls to sacct"""
+        """Number of calls to squeue"""
         return self._num_calls
 
     def clear(self) -> None:
@@ -82,10 +82,10 @@ class InfoWatcher:
             one of "force" (forces a call), "standard" (calls regularly) or "cache" (does not call)
         """
         if job_id is None:
-            raise RuntimeError("Cannot call sacct without a slurm id")
+            raise RuntimeError("Cannot call squeue without a slurm id")
         if job_id not in self._registered:
             self.register_job(job_id)
-        # check with a call to sacct/cinfo
+        # check with a call to squeue/cinfo
         self.update_if_long_enough(mode)
         return self._info_dict.get(job_id, {})
 
@@ -122,7 +122,7 @@ class InfoWatcher:
             self.update()
 
     def update(self) -> None:
-        """Updates the info of all registered jobs with a call to sacct"""
+        """Updates the info of all registered jobs with a call to squeue"""
         command = self._make_command()
         if command is None:
             return
@@ -132,7 +132,7 @@ class InfoWatcher:
             self._output = subprocess.check_output(command, shell=False)
         except Exception as e:
             logger.get_logger().warning(
-                f"Call #{self.num_calls} - Bypassing sacct error {e}, status may be inaccurate."
+                f"Call #{self.num_calls} - Bypassing squeue error {e}, status may be inaccurate."
             )
         else:
             self._info_dict.update(self.read_info(self._output))
@@ -419,7 +419,7 @@ class Job(tp.Generic[R]):
         ----
         This function is not foolproof, and may say that the job is not terminated even
         if it is when the job failed (no result file, but job not running) because
-        we avoid calling sacct/cinfo everytime done is called
+        we avoid calling squeue/cinfo everytime done is called
         """
         # TODO: keep state info once job is finished?
         if self._sub_jobs:
@@ -432,7 +432,7 @@ class Job(tp.Generic[R]):
             pass
         if self.paths.result_pickle.exists():
             return True
-        # check with a call to sacct/cinfo
+        # check with a call to squeue/cinfo
         if self.watcher.is_done(self.job_id, mode="force" if force_check else "standard"):
             return True
         return False
@@ -447,7 +447,7 @@ class Job(tp.Generic[R]):
         return self.watcher.get_state(self.job_id, mode="standard")
 
     def get_info(self, mode: str = "force") -> tp.Dict[str, str]:
-        """Returns informations about the job as a dict (sacct call)"""
+        """Returns informations about the job as a dict (squeue call)"""
         return self.watcher.get_info(self.job_id, mode=mode)
 
     def _get_logs_string(self, name: str) -> tp.Optional[str]:

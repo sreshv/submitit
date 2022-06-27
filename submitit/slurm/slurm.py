@@ -47,9 +47,8 @@ class SlurmInfoWatcher(core.InfoWatcher):
         to_check = {x.split("_")[0] for x in self._registered - self._finished}
         if not to_check:
             return None
-        command = ["sacct", "-o", "JobID,State,NodeList", "--parsable2"]
-        for jid in to_check:
-            command.extend(["-j", str(jid)])
+        command = ["squeue", "-o", '"%i %T %N"', "-j"]
+        command.extend([",".join(str(jid) for jid in to_check)])
         return command
 
     def get_state(self, job_id: str, mode: str = "standard") -> str:
@@ -67,17 +66,24 @@ class SlurmInfoWatcher(core.InfoWatcher):
         return info.get("State") or "UNKNOWN"
 
     def read_info(self, string: Union[bytes, str]) -> Dict[str, Dict[str, str]]:
-        """Reads the output of sacct and returns a dictionary containing main information"""
+        """Reads the output of squeue and returns a dictionary containing main information"""
+
+        squeue_name_mapper = {
+        "JOBID": "JobID",
+        "STATE": "State",
+        "NODELIST": "NodeList",
+        }
+
         if not isinstance(string, str):
             string = string.decode()
-        lines = string.splitlines()
+        lines = [x.strip('"').strip() for x in string.splitlines()]
         if len(lines) < 2:
             return {}  # one job id does not exist (yet)
-        names = lines[0].split("|")
+        names = [squeue_name_mapper[x] if x in squeue_name_mapper else x for x in lines[0].split()]
         # read all lines
         all_stats: Dict[str, Dict[str, str]] = {}
         for line in lines[1:]:
-            stats = {x: y.strip() for x, y in zip(names, line.split("|"))}
+            stats = {x: y.strip() for x, y in zip(names, line.split())}
             job_id = stats["JobID"]
             if not job_id or "." in job_id:
                 continue
